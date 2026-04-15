@@ -2,3 +2,11 @@ node_modules/
 dist/
 .env
 *.local
+
+# Docker
+postgres_data/
+
+#Claude
+claude_data/
+.claude/
+settings.local.json
