@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { billingService } from '../../services/billingService';
 import { InvoiceTable } from '../../components/organisms/InvoiceTable';
+import { InvoiceFilterBar } from '../../components/molecules/InvoiceFilterBar';
 import type { Invoice } from '../../types/invoice.types';
+import type { InvoiceFilter } from '../../components/molecules/InvoiceFilterBar';
 
 export function InvoicesPage() {
   const { user } = useAuth();
@@ -10,6 +12,7 @@ export function InvoicesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [payingId, setPayingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<InvoiceFilter>('ALL');
 
   useEffect(() => {
     if (!user) return;
@@ -18,7 +21,12 @@ export function InvoicesPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await billingService.getByUser(userId);
+        let data: Invoice[];
+        if (user.role === 'ADMIN') {
+          data = await billingService.getAll();
+        } else {
+          data = await billingService.getByUser(userId);
+        }
         setInvoices(data);
       } catch {
         setError('No se pudieron cargar las facturas.');
@@ -28,7 +36,7 @@ export function InvoicesPage() {
     };
     void load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   const handlePay = async (invoiceId: number) => {
     setPayingId(invoiceId);
@@ -40,6 +48,16 @@ export function InvoicesPage() {
     } finally {
       setPayingId(null);
     }
+  };
+
+  const filteredInvoices =
+    filter === 'ALL' ? invoices : invoices.filter((inv) => inv.status === filter);
+
+  const counts: Partial<Record<InvoiceFilter, number>> = {
+    ALL: invoices.length,
+    PENDING: invoices.filter((i) => i.status === 'PENDING').length,
+    PAID: invoices.filter((i) => i.status === 'PAID').length,
+    OVERDUE: invoices.filter((i) => i.status === 'OVERDUE').length,
   };
 
   return (
@@ -57,8 +75,14 @@ export function InvoicesPage() {
         </div>
       )}
 
+      <InvoiceFilterBar
+        activeFilter={filter}
+        onFilterChange={setFilter}
+        counts={counts as Record<InvoiceFilter, number>}
+      />
+
       <InvoiceTable
-        invoices={invoices}
+        invoices={filteredInvoices}
         isLoading={isLoading}
         payingId={payingId}
         onPay={handlePay}
