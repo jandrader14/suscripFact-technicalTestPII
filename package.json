@@ -5,5 +5,8 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "test": "cd backend && npm run test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
