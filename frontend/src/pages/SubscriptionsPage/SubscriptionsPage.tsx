@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useSubscription } from '../../hooks/useSubscription';
 import { billingService } from '../../services/billingService';
+import { plansService } from '../../services/plansService';
 import { Badge } from '../../components/atoms/Badge';
 import { Button } from '../../components/atoms/Button';
 import { Spinner } from '../../components/atoms/Spinner';
 import { StatCard } from '../../components/molecules/StatCard';
+import type { Plan } from '../../types/plan.types';
 
 function formatDate(dateStr: string): string {
   return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(dateStr));
@@ -22,6 +24,8 @@ export function SubscriptionsPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
+  const [allPlans, setAllPlans] = useState<Plan[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -29,7 +33,11 @@ export function SubscriptionsPage() {
     const load = async () => {
       setIsLoading(true);
       try {
-        await loadStatusRef.current(userId);
+        const [plans] = await Promise.all([
+          plansService.getAll(),
+          loadStatusRef.current(userId),
+        ]);
+        setAllPlans(plans);
       } finally {
         setIsLoading(false);
       }
@@ -38,8 +46,19 @@ export function SubscriptionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Derive plan from subscription whenever either changes
+  useEffect(() => {
+    if (subscription && allPlans.length > 0) {
+      setCurrentPlan(allPlans.find((p) => p.id === subscription.planId) ?? null);
+    }
+  }, [subscription, allPlans]);
+
   const handleGenerateInvoice = async () => {
     if (!subscription || !user) return;
+    if (!currentPlan) {
+      setError('No se pudo obtener la información del plan. Recarga la página.');
+      return;
+    }
     setIsGenerating(true);
     setError(null);
     setSuccessMsg(null);
@@ -47,8 +66,9 @@ export function SubscriptionsPage() {
       await billingService.generate({
         subscriptionId: subscription.id,
         userId: user.id,
-        planType: 'BRONZE',
-        planPrice: 0,
+        planType: currentPlan.type,
+        planPrice: currentPlan.price,
+        maxUsers: currentPlan.maxUsers,
         startDate: subscription.startDate,
         endDate: subscription.endDate,
         dueDate: new Date().toISOString().split('T')[0],
@@ -108,6 +128,15 @@ export function SubscriptionsPage() {
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
+              <StatCard
+                title="Plan"
+                value={currentPlan?.name ?? '—'}
+                description={
+                  currentPlan
+                    ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(currentPlan.price)
+                    : undefined
+                }
+              />
               <StatCard
                 title="Inicio"
                 value={formatDate(subscription.startDate)}

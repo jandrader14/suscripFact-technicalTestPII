@@ -2,12 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useSubscription } from '../../hooks/useSubscription';
 import { billingService } from '../../services/billingService';
-import { MetricsDashboard } from '../../components/organisms/MetricsDashboard';
+import { subscriptionsService } from '../../services/subscriptionsService';
+import { AdminMetricsPanel } from '../../components/organisms/AdminMetricsPanel';
 import { InvoiceTable } from '../../components/organisms/InvoiceTable';
+import { MetricsDashboard } from '../../components/organisms/MetricsDashboard';
+import { InvoiceFilterBar } from '../../components/molecules/InvoiceFilterBar';
+import { Button } from '../../components/atoms/Button';
+import type { InvoiceFilter } from '../../components/molecules/InvoiceFilterBar';
 import type { Invoice } from '../../types/invoice.types';
+import type { SubscriptionMetrics } from '../../types/subscription.types';
 
 export function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { subscription, loadStatus } = useSubscription();
   const loadStatusRef = useRef(loadStatus);
   loadStatusRef.current = loadStatus;
@@ -15,6 +21,13 @@ export function DashboardPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [payingId, setPayingId] = useState<number | null>(null);
+  const [filter, setFilter] = useState<InvoiceFilter>('ALL');
+  const [isUpdatingOverdue, setIsUpdatingOverdue] = useState(false);
+
+  // Admin-only state
+  const [adminMetrics, setAdminMetrics] = useState<SubscriptionMetrics>({
+    active: 0, expired: 0, cancelled: 0, total: 0,
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -22,11 +35,22 @@ export function DashboardPage() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const [invoiceData] = await Promise.all([
-          billingService.getByUser(userId),
-          loadStatusRef.current(userId),
-        ]);
-        setInvoices(invoiceData);
+        if (isAdmin) {
+          // Actualizar estados OVERDUE antes de cargar para ver datos frescos
+          await billingService.updateOverdue().catch(() => null);
+          const [invoiceData, metrics] = await Promise.all([
+            billingService.getAll(),
+            subscriptionsService.getMetrics(),
+          ]);
+          setInvoices(invoiceData);
+          setAdminMetrics(metrics);
+        } else {
+          const [invoiceData] = await Promise.all([
+            billingService.getByUser(userId),
+            loadStatusRef.current(userId),
+          ]);
+          setInvoices(invoiceData);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -34,6 +58,21 @@ export function DashboardPage() {
     void load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleUpdateOverdue = async () => {
+    setIsUpdatingOverdue(true);
+    try {
+      await billingService.updateOverdue();
+      const [invoiceData, metrics] = await Promise.all([
+        billingService.getAll(),
+        subscriptionsService.getMetrics(),
+      ]);
+      setInvoices(invoiceData);
+      setAdminMetrics(metrics);
+    } finally {
+      setIsUpdatingOverdue(false);
+    }
+  };
 
   const handlePay = async (invoiceId: number) => {
     setPayingId(invoiceId);
@@ -45,29 +84,61 @@ export function DashboardPage() {
     }
   };
 
+  const filteredInvoices =
+    filter === 'ALL' ? invoices : invoices.filter((inv) => inv.status === filter);
+
+  const counts: Partial<Record<InvoiceFilter, number>> = {
+    ALL: invoices.length,
+    PENDING: invoices.filter((i) => i.status === 'PENDING').length,
+    PAID: invoices.filter((i) => i.status === 'PAID').length,
+    OVERDUE: invoices.filter((i) => i.status === 'OVERDUE').length,
+  };
+
   return (
     <div className="flex flex-col gap-8 p-6 max-w-6xl mx-auto">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-display font-semibold text-text-primary">
-          Dashboard
-        </h1>
-        <p className="text-sm font-body text-text-secondary">
-          Bienvenido, <span className="text-text-primary font-medium">{user?.email}</span>
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-display font-semibold text-text-primary">Dashboard</h1>
+          <p className="text-sm font-body text-text-secondary">
+            Bienvenido, <span className="text-text-primary font-medium">{user?.email}</span>
+          </p>
+        </div>
+        {isAdmin && (
+          <Button
+            variant="secondary"
+            size="sm"
+            isLoading={isUpdatingOverdue}
+            onClick={() => void handleUpdateOverdue()}
+            title="Marca como OVERDUE las facturas pendientes cuya fecha de vencimiento ya pasó"
+          >
+            Actualizar vencidas
+          </Button>
+        )}
       </header>
 
-      <MetricsDashboard
-        invoices={invoices}
-        subscription={subscription}
-        isLoading={isLoading}
-      />
+      {isAdmin ? (
+        <AdminMetricsPanel
+          metrics={adminMetrics}
+          totalInvoices={invoices.length}
+          isLoading={isLoading}
+        />
+      ) : (
+        <MetricsDashboard
+          invoices={invoices}
+          subscription={subscription}
+          isLoading={isLoading}
+        />
+      )}
 
-      <InvoiceTable
-        invoices={invoices}
-        isLoading={isLoading}
-        payingId={payingId}
-        onPay={handlePay}
-      />
+      <div className="flex flex-col gap-3">
+        <InvoiceFilterBar activeFilter={filter} onChange={setFilter} counts={counts} />
+        <InvoiceTable
+          invoices={filteredInvoices}
+          isLoading={isLoading}
+          payingId={payingId}
+          onPay={handlePay}
+        />
+      </div>
     </div>
   );
 }

@@ -13,4 +13,7 @@ export const billingService = {
 
   updateOverdue: (): Promise<void> =>
     api.patch('/billing/invoices/overdue').then(() => undefined),
+
+  getAll: (): Promise<Invoice[]> =>
+    api.get<Invoice[]>('/billing/invoices/all').then((r) => r.data),
 };

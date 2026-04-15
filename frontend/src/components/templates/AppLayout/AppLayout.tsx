@@ -12,6 +12,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/invoices', label: 'Facturas' },
   { to: '/plans', label: 'Planes' },
   { to: '/subscriptions', label: 'Suscripción' },
+  { to: '/admin/users', label: 'Clientes', adminOnly: true },
 ];
 
 export function AppLayout() {

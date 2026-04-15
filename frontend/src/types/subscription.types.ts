@@ -20,3 +20,10 @@ export interface SubscriptionStatusResult {
   isActive: boolean;
   subscription: Subscription | null;
 }
+
+export interface SubscriptionMetrics {
+  active: number;
+  expired: number;
+  cancelled: number;
+  total: number;
+}

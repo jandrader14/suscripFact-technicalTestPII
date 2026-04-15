@@ -1,7 +1,8 @@
 import api from './api';
-import type{
+import type {
   CreateSubscriptionPayload,
   Subscription,
+  SubscriptionMetrics,
   SubscriptionStatusResult,
 } from '../types/subscription.types';
 
@@ -16,4 +17,13 @@ export const subscriptionsService = {
     api
       .get<SubscriptionStatusResult>(`/subscriptions/status/${userId}`)
       .then((r) => r.data),
+
+  getAll: (): Promise<Subscription[]> =>
+    api.get<Subscription[]>('/subscriptions/all').then((r) => r.data),
+
+  getMetrics: (): Promise<SubscriptionMetrics> =>
+    api.get<SubscriptionMetrics>('/subscriptions/metrics').then((r) => r.data),
+
+  toggle: (subscriptionId: number): Promise<Subscription> =>
+    api.patch<Subscription>(`/subscriptions/${subscriptionId}/toggle`).then((r) => r.data),
 };
