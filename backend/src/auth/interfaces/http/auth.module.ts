@@ -4,9 +4,11 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { GetAllUsersUseCase } from '../../application/use-cases/get-all-users.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
 import { RegisterUseCase } from '../../application/use-cases/register.use-case';
 import {
+  IGetAllUsersUseCase,
   ILoginUseCase,
   IRegisterUseCase,
 } from '../../domain/ports/in/IAuthUseCase';
@@ -54,6 +56,10 @@ import { AuthController } from './auth.controller';
     {
       provide: ILoginUseCase,
       useClass: LoginUseCase,
+    },
+    {
+      provide: IGetAllUsersUseCase,
+      useClass: GetAllUsersUseCase,
     },
   ],
   exports: [JwtModule, PassportModule],

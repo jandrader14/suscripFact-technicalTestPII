@@ -26,3 +26,7 @@ export abstract class IGetUserInvoicesUseCase {
 export abstract class IUpdateOverdueInvoicesUseCase {
   abstract execute(): Promise<void>;
 }
+
+export abstract class IGetAllInvoicesUseCase {
+  abstract execute(): Promise<Invoice[]>;
+}

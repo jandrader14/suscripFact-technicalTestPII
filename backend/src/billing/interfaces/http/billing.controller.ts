@@ -19,6 +19,7 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { JwtUser } from '../../../common/types/jwt-user.type';
 import {
   IGenerateInvoiceUseCase,
+  IGetAllInvoicesUseCase,
   IGetUserInvoicesUseCase,
   IPayInvoiceUseCase,
   IUpdateOverdueInvoicesUseCase,
@@ -33,12 +34,15 @@ export class BillingController {
     private readonly payInvoiceUseCase: IPayInvoiceUseCase,
     private readonly getUserInvoicesUseCase: IGetUserInvoicesUseCase,
     private readonly updateOverdueInvoicesUseCase: IUpdateOverdueInvoicesUseCase,
+    private readonly getAllInvoicesUseCase: IGetAllInvoicesUseCase,
   ) {}
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
-  async generate(@Body() dto: GenerateInvoiceDto) {
+  async generate(
+    @Body() dto: GenerateInvoiceDto,
+    @CurrentUser() currentUser: JwtUser,
+  ) {
+    this.assertAccessAllowed(dto.userId, currentUser);
     return this.generateInvoiceUseCase.execute({
       subscriptionId: dto.subscriptionId,
       userId: dto.userId,
@@ -80,6 +84,13 @@ export class BillingController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async updateOverdue(): Promise<void> {
     await this.updateOverdueInvoicesUseCase.execute();
+  }
+
+  @Get('all')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  async findAll() {
+    return this.getAllInvoicesUseCase.execute();
   }
 
   private assertAccessAllowed(userId: number, currentUser: JwtUser): void {

@@ -67,4 +67,9 @@ export class SubscriptionTypeOrmRepository implements ISubscriptionRepository {
     const saved = await this.repo.save(orm);
     return SubscriptionMapper.toDomain(saved);
   }
+
+  async findAll(): Promise<Subscription[]> {
+    const orms = await this.repo.find({ order: { createdAt: 'DESC' } });
+    return orms.map(SubscriptionMapper.toDomain);
+  }
 }

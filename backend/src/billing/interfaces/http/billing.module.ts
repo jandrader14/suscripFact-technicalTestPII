@@ -2,11 +2,13 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { GenerateInvoiceUseCase } from '../../application/use-cases/generate-invoice.use-case';
+import { GetAllInvoicesUseCase } from '../../application/use-cases/get-all-invoices.use-case';
 import { GetUserInvoicesUseCase } from '../../application/use-cases/get-user-invoices.use-case';
 import { PayInvoiceUseCase } from '../../application/use-cases/pay-invoice.use-case';
 import { UpdateOverdueInvoicesUseCase } from '../../application/use-cases/update-overdue-invoices.use-case';
 import {
   IGenerateInvoiceUseCase,
+  IGetAllInvoicesUseCase,
   IGetUserInvoicesUseCase,
   IPayInvoiceUseCase,
   IUpdateOverdueInvoicesUseCase,
@@ -46,6 +48,10 @@ import { BillingController } from './billing.controller';
     {
       provide: IUpdateOverdueInvoicesUseCase,
       useClass: UpdateOverdueInvoicesUseCase,
+    },
+    {
+      provide: IGetAllInvoicesUseCase,
+      useClass: GetAllInvoicesUseCase,
     },
   ],
 })

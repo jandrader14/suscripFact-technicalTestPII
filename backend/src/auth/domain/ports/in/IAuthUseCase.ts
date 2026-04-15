@@ -27,3 +27,7 @@ export abstract class IRegisterUseCase {
 export abstract class ILoginUseCase {
   abstract execute(input: LoginInput): Promise<AuthTokenResponse>;
 }
+
+export abstract class IGetAllUsersUseCase {
+  abstract execute(): Promise<User[]>;
+}

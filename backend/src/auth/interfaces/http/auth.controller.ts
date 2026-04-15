@@ -1,6 +1,21 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 
-import { ILoginUseCase, IRegisterUseCase } from '../../domain/ports/in/IAuthUseCase';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import {
+  IGetAllUsersUseCase,
+  ILoginUseCase,
+  IRegisterUseCase,
+} from '../../domain/ports/in/IAuthUseCase';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -9,6 +24,7 @@ export class AuthController {
   constructor(
     private readonly registerUseCase: IRegisterUseCase,
     private readonly loginUseCase: ILoginUseCase,
+    private readonly getAllUsersUseCase: IGetAllUsersUseCase,
   ) {}
 
   @Post('register')
@@ -21,5 +37,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
     return this.loginUseCase.execute(dto);
+  }
+
+  @Get('users')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  async findAllUsers() {
+    const users = await this.getAllUsersUseCase.execute();
+    return users.map((u) => u.toPublic());
   }
 }

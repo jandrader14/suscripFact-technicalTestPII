@@ -66,4 +66,9 @@ export class UserTypeOrmRepository implements IUserRepository {
   async existsByEmail(email: string): Promise<boolean> {
     return this.repo.existsBy({ email });
   }
+
+  async findAll(): Promise<User[]> {
+    const orms = await this.repo.find({ order: { createdAt: 'DESC' } });
+    return orms.map(UserMapper.toDomain);
+  }
 }

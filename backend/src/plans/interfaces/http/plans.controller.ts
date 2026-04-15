@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Put,
   UseGuards,
@@ -59,6 +60,17 @@ export class PlansController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePlanDto,
+  ) {
+    const plan = await this.updatePlanUseCase.execute(id, dto);
+    return plan.toPublic();
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  async partialUpdate(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePlanDto,
   ) {

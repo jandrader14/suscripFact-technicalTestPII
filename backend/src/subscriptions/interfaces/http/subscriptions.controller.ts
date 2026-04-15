@@ -3,8 +3,11 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -17,7 +20,10 @@ import { JwtUser } from '../../../common/types/jwt-user.type';
 import {
   ICheckSubscriptionStatusUseCase,
   ICreateSubscriptionUseCase,
+  IGetAllSubscriptionsUseCase,
+  IGetSubscriptionMetricsUseCase,
   IGetUserSubscriptionsUseCase,
+  IToggleSubscriptionStatusUseCase,
 } from '../../domain/ports/in/ISubscriptionUseCase';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 
@@ -28,12 +34,17 @@ export class SubscriptionsController {
     private readonly createSubscriptionUseCase: ICreateSubscriptionUseCase,
     private readonly getUserSubscriptionsUseCase: IGetUserSubscriptionsUseCase,
     private readonly checkSubscriptionStatusUseCase: ICheckSubscriptionStatusUseCase,
+    private readonly getAllSubscriptionsUseCase: IGetAllSubscriptionsUseCase,
+    private readonly toggleSubscriptionStatusUseCase: IToggleSubscriptionStatusUseCase,
+    private readonly getSubscriptionMetricsUseCase: IGetSubscriptionMetricsUseCase,
   ) {}
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
-  async create(@Body() dto: CreateSubscriptionDto) {
+  async create(
+    @Body() dto: CreateSubscriptionDto,
+    @CurrentUser() currentUser: JwtUser,
+  ) {
+    this.assertAccessAllowed(dto.userId, currentUser);
     return this.createSubscriptionUseCase.execute({
       userId: dto.userId,
       planId: dto.planId,
@@ -58,6 +69,28 @@ export class SubscriptionsController {
   ) {
     this.assertAccessAllowed(userId, currentUser);
     return this.checkSubscriptionStatusUseCase.execute(userId);
+  }
+
+  @Get('all')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  async findAll() {
+    return this.getAllSubscriptionsUseCase.execute();
+  }
+
+  @Get('metrics')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  async getMetrics() {
+    return this.getSubscriptionMetricsUseCase.execute();
+  }
+
+  @Patch(':id/toggle')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @HttpCode(HttpStatus.OK)
+  async toggle(@Param('id', ParseIntPipe) id: number) {
+    return this.toggleSubscriptionStatusUseCase.execute(id);
   }
 
   private assertAccessAllowed(userId: number, currentUser: JwtUser): void {

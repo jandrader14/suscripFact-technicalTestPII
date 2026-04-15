@@ -74,4 +74,9 @@ export class InvoiceTypeOrmRepository implements IInvoiceRepository {
     const saved = await this.repo.save(orm);
     return InvoiceMapper.toDomain(saved);
   }
+
+  async findAll(): Promise<Invoice[]> {
+    const orms = await this.repo.find({ order: { createdAt: 'DESC' } });
+    return orms.map(InvoiceMapper.toDomain);
+  }
 }
